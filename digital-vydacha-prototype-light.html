@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Self-Service — Ячейки выдачи · Прототип</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface2: #f7f8fa;
+      --border: #e2e6ec;
+      --border2: #d0d6e0;
+      --text: #1a202c;
+      --muted: #6b7280;
+      --accent: #d97706;
+
+      --green: #16a34a;
+      --green-dim: #f0fdf4;
+      --green-border: #bbf7d0;
+      --green-text: #14532d;
+
+      --blue: #2563eb;
+      --blue-dim: #eff6ff;
+      --blue-border: #bfdbfe;
+      --blue-text: #1e3a8a;
+
+      --red: #dc2626;
+      --red-dim: #fff5f5;
+      --red-border: #fecaca;
+
+      --orange-dim: #fffbeb;
+      --orange-border: #fde68a;
+      --orange-text: #92400e;
+
+      --kiosk-color: #2563eb;
+      --kiosk-dim: #eff6ff;
+      --kiosk-border: #bfdbfe;
+
+      --mobile-color: #7c3aed;
+      --mobile-dim: #f5f3ff;
+      --mobile-border: #ddd6fe;
+
+      --cashier-color: #0891b2;
+      --cashier-dim: #ecfeff;
+      --cashier-border: #a5f3fc;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── TOP BAR ─── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .topbar-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .topbar-sub   { font-size: 0.65rem; color: var(--muted); margin-top: 1px; }
+    .clock {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── LAYOUT ─── */
+    .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+
+    /* Row 1: 3 channels */
+    .row-channels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    /* Row 2: Guest Monitor + Pickup Zone */
+    .row-monitor  { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+
+    /* Row 3: Packer + Presenter */
+    .row-workers  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Row 4: Orders */
+    .row-orders   { display: grid; grid-template-columns: 1fr; }
+
+    /* ─── PANEL BASE ─── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-head {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+    .badge {
+      background: var(--border);
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .panel-body {
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 120px;
+      max-height: 280px;
+    }
+    .empty-state {
+      color: #d1d5db;
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 24px 10px;
+    }
+
+    /* ─── CHANNEL BLOCKS ─── */
+    .channel-block {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+    .channel-head {
+      padding: 11px 15px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .channel-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .channel-kiosk   .channel-icon { background: var(--kiosk-dim);  }
+    .channel-mobile  .channel-icon { background: var(--mobile-dim); }
+    .channel-cashier .channel-icon { background: var(--cashier-dim);}
+
+    .channel-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .channel-kiosk   .channel-name { color: var(--kiosk-color);  }
+    .channel-mobile  .channel-name { color: var(--mobile-color); }
+    .channel-cashier .channel-name { color: var(--cashier-color);}
+
+    .channel-stat {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .channel-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      min-height: 80px;
+      justify-content: center;
+    }
+
+    /* Hint bar inside channel */
+    .channel-hint {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Create button per channel */
+    .btn-channel {
+      width: 100%;
+      border: none;
+      padding: 9px 14px;
+      border-radius: 9px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      color: #fff;
+    }
+    .btn-channel:hover   { transform: scale(1.02); }
+    .btn-channel:active  { transform: scale(0.97); }
+    .btn-channel:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-kiosk   { background: var(--kiosk-color);  }
+    .btn-mobile  { background: var(--mobile-color); }
+    .btn-cashier { background: var(--cashier-color);}
+
+    /* Mobile push notification */
+    .mobile-notif {
+      border-radius: 9px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      animation: notifIn 0.25s ease;
+    }
+    .mobile-notif-red   { background: var(--red-dim);  border: 1.5px solid var(--red-border); }
+    .mobile-notif-green { background: var(--green-dim);border: 1.5px solid var(--green-border);}
+    .mobile-notif-num   { font-size: 1.2rem; }
+    .mobile-notif-red   .mobile-notif-num { color: var(--red);   }
+    .mobile-notif-green .mobile-notif-num { color: var(--green); }
+    .mobile-notif-arrow { color: #9ca3af; font-size: 1rem; }
+    .mobile-notif-cell  { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 6px; }
+    .mobile-notif-red   .mobile-notif-cell { background: var(--red-dim);  border: 1px solid var(--red-border);   color: var(--red);   }
+    .mobile-notif-green .mobile-notif-cell { background: var(--green-dim);border: 1px solid var(--green-border); color: var(--green); }
+    .mobile-notif-label { font-size: 0.6rem; color: var(--muted); text-align: center; margin-top: 2px; }
+
+    @keyframes notifIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── ORDER CARDS ─── */
+    .order-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      padding: 11px 13px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .order-card:hover    { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,0.1); }
+    .order-card:active   { transform: translateY(0); }
+    .order-card.assembling { border-color: var(--orange-border); background: var(--orange-dim); }
+    .order-card.ready      { border-color: var(--green-border);  background: var(--green-dim); }
+    .order-card.issuing    { border-color: var(--blue-border);   background: var(--blue-dim); }
+
+    .card-top {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .card-num {
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .assembling .card-num { color: var(--accent); }
+    .ready      .card-num { color: var(--green); }
+    .issuing    .card-num { color: var(--blue); }
+
+    .card-badges { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+    .card-status {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .assembling .card-status { background: var(--orange-border); color: var(--orange-text); }
+    .ready      .card-status { background: var(--green-border);  color: var(--green-text); }
+    .issuing    .card-status { background: var(--blue-border);   color: var(--blue-text); }
+
+    .card-channel {
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .card-items {
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: #9ca3af;
+    }
+    .cell-badge {
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.65rem;
+    }
+    .card-hint {
+      font-size: 0.62rem;
+      margin-top: 7px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: #9ca3af;
+    }
+    .assembling .card-hint { border-color: var(--orange-border); color: #b45309; }
+    .ready      .card-hint { border-color: var(--green-border);  color: var(--green); }
+    .issuing    .card-hint { border-color: var(--blue-border);   color: var(--blue); }
+
+    /* ─── PRESENTER CARD (cell is hero) ─── */
+    .presenter-card {
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      padding: 11px 13px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .presenter-card:hover  { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,0.1); }
+    .presenter-card:active { transform: translateY(0); }
+    .presenter-card.cell-red   { border-color: var(--red-border);   background: var(--red-dim); }
+    .presenter-card.cell-green { border-color: var(--green-border); background: var(--green-dim); }
+
+    .presenter-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .presenter-cell {
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .presenter-card.cell-red   .presenter-cell { color: var(--red); }
+    .presenter-card.cell-green .presenter-cell { color: var(--green); }
+
+    .presenter-order-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .presenter-card.cell-red   .presenter-order-badge { background: var(--red-border);   color: var(--red); }
+    .presenter-card.cell-green .presenter-order-badge { background: var(--green-border); color: var(--green-text); }
+
+    .presenter-items {
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .presenter-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: #9ca3af;
+      padding-top: 6px;
+      border-top: 1px solid;
+    }
+    .presenter-card.cell-red   .presenter-footer { border-color: var(--red-border); }
+    .presenter-card.cell-green .presenter-footer { border-color: var(--green-border); }
+    .presenter-hint {
+      font-size: 0.62rem;
+      color: #9ca3af;
+    }
+
+    /* ─── GUEST MONITOR ─── */
+    .gm-wrap .panel-body {
+      padding: 0;
+      min-height: unset;
+      max-height: unset;
+    }
+    .gm-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+    }
+    .gm-col { padding: 13px 18px 15px; }
+    .gm-col:first-child { border-right: 1px solid var(--border); }
+    .gm-col-title {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 11px;
+    }
+    .gm-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-height: 48px;
+      align-items: flex-start;
+    }
+    .gm-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #6b7280;
+      line-height: 1;
+      animation: chipIn 0.2s ease;
+    }
+    .gm-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 9px;
+      padding: 9px 14px;
+      animation: chipIn 0.2s ease;
+    }
+    .gm-row-red   { background: var(--red-dim);  border: 1.5px solid var(--red-border); }
+    .gm-row-green { background: var(--green-dim);border: 1.5px solid var(--green-border);}
+    .gm-row-num { font-size: 1.5rem; font-weight: 900; line-height: 1; }
+    .gm-row-red   .gm-row-num { color: var(--red); }
+    .gm-row-green .gm-row-num { color: var(--green); }
+    .gm-arrow { font-size: 1rem; color: #d1d5db; }
+    .gm-cell {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .gm-row-red   .gm-cell { background: var(--red-dim);  border: 1px solid var(--red-border);   color: var(--red);   }
+    .gm-row-green .gm-cell { background: var(--green-dim);border: 1px solid var(--green-border); color: var(--green); }
+    .gm-empty { font-size: 0.75rem; color: #d1d5db; }
+
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── PICKUP ZONE ─── */
+    .pickup-grid {
+      padding: 11px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      flex: 1;
+    }
+    .pickup-cell {
+      border-radius: 11px;
+      padding: 14px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      transition: all 0.25s;
+    }
+    .pc-red   { background: var(--red-dim);  border: 2px solid var(--red-border); }
+    .pc-green { background: var(--green-dim);border: 2px solid var(--green-border);}
+    .pc-red.occupied   { border-color: var(--red);   box-shadow: 0 0 14px rgba(220,38,38,0.15); }
+    .pc-green.occupied { border-color: var(--green); box-shadow: 0 0 14px rgba(22,163,74,0.15); }
+    .pc-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .pc-order { font-size: 1.7rem; font-weight: 900; line-height: 1; transition: all 0.2s; }
+    .pc-red .pc-order   { color: #fca5a5; }
+    .pc-green .pc-order { color: #bbf7d0; }
+    .pc-red.occupied .pc-order   { color: var(--red); }
+    .pc-green.occupied .pc-order { color: var(--green); }
+
+    /* ─── ORDERS TABLE ─── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .table-head {
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-head-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+    .table-scroll { max-height: 190px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 7px 15px;
+      text-align: left;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+      background: var(--surface2);
+      position: sticky; top: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 8px 15px;
+      border-top: 1px solid var(--border);
+      font-size: 0.73rem;
+      color: var(--muted);
+    }
+    tr:hover td { background: var(--surface2); }
+    td.num-cell { color: var(--text); font-weight: 700; }
+
+    .spill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.62rem;
+      font-weight: 700;
+    }
+    .sp-created   { background: #f3f4f6; color: #9ca3af; }
+    .sp-assembling{ background: var(--orange-border); color: var(--orange-text); }
+    .sp-ready     { background: var(--green-border);  color: var(--green-text); }
+    .sp-issuing   { background: var(--blue-border);   color: var(--blue-text); }
+    .sp-issued    { background: #f9fafb; color: #d1d5db; }
+
+    .ch-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-size: 0.6rem;
+      font-weight: 600;
+    }
+    .ch-kiosk   { background: var(--kiosk-dim);   color: var(--kiosk-color); }
+    .ch-mobile  { background: var(--mobile-dim);  color: var(--mobile-color);}
+    .ch-cashier { background: var(--cashier-dim); color: var(--cashier-color);}
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: 18px; right: 18px;
+      background: #fff;
+      border: 1.5px solid var(--red-border);
+      color: var(--red);
+      padding: 11px 18px;
+      border-radius: 11px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transform: translateY(70px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: #b0b8c8; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Digital Self-Service — Ячейки выдачи</div>
+    <div class="topbar-sub">Прототип · Вариант 3 · Kick-off демонстрация</div>
+  </div>
+  <div class="clock" id="clock">00:00:00</div>
+</div>
+
+<div class="layout">
+
+  <!-- ROW 1: CHANNELS -->
+  <div class="row-channels">
+
+    <!-- KIOSK -->
+    <div class="channel-block channel-kiosk">
+      <div class="channel-head">
+        <div class="channel-icon">🖥️</div>
+        <div>
+          <div class="channel-name">Киоск</div>
+        </div>
+      </div>
+      <div class="channel-body">
+        <button class="btn-channel btn-kiosk" onclick="createOrder('Киоск')">+ Создать заказ</button>
+      </div>
+    </div>
+
+    <!-- MOBILE -->
+    <div class="channel-block channel-mobile">
+      <div class="channel-head">
+        <div class="channel-icon">📱</div>
+        <div>
+          <div class="channel-name">Моб приложение</div>
+        </div>
+      </div>
+      <div class="channel-body" id="mobile-body">
+        <button class="btn-channel btn-mobile" id="btn-mobile" onclick="createOrder('Моб приложение')">+ Создать заказ</button>
+      </div>
+    </div>
+
+    <!-- CASHIER -->
+    <div class="channel-block channel-cashier">
+      <div class="channel-head">
+        <div class="channel-icon">🧾</div>
+        <div>
+          <div class="channel-name">Касса</div>
+        </div>
+      </div>
+      <div class="channel-body">
+        <button class="btn-channel btn-cashier" onclick="createOrder('Касса')">+ Создать заказ</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: GUEST MONITOR + PICKUP ZONE -->
+  <div class="row-monitor">
+
+    <!-- GUEST MONITOR -->
+    <div class="panel gm-wrap">
+      <div class="panel-head">
+        <div class="panel-title">🖥 Гостевой монитор</div>
+      </div>
+      <div class="panel-body" style="overflow:visible;">
+        <div class="gm-body">
+          <div class="gm-col">
+            <div class="gm-col-title">⏳ Готовится</div>
+            <div class="gm-chips" id="gm-preparing"></div>
+          </div>
+          <div class="gm-col">
+            <div class="gm-col-title">✅ Заберите заказ</div>
+            <div class="gm-chips" id="gm-collect"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PICKUP ZONE -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">📍 Зона выдачи</div>
+      </div>
+      <div class="pickup-grid" id="pickup-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: PACKER + PRESENTER -->
+  <div class="row-workers">
+
+    <!-- PACKER -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">📦 Пакер</div>
+        <div class="badge" id="packer-badge">0</div>
+      </div>
+      <div class="panel-body" id="packer-body">
+        <div class="empty-state">Нет активных заказов</div>
+      </div>
+    </div>
+
+    <!-- PRESENTER -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">🧑‍💼 Презентер</div>
+        <div class="badge" id="presenter-badge">0</div>
+      </div>
+      <div class="panel-body" id="presenter-body">
+        <div class="empty-state">Нет заказов к выдаче</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: ORDERS TABLE -->
+  <div class="row-orders">
+    <div class="table-wrap">
+      <div class="table-head">
+        <div class="table-head-title">Все заказы</div>
+        <div style="font-size:0.65rem;color:#9ca3af" id="table-count">0 заказов</div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Место продажи</th>
+              <th>Время</th>
+              <th>Статус</th>
+              <th>Ячейка</th>
+              <th>Состав заказа</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── CONSTANTS ── */
+  const ST = {
+    CREATED:    'создан',
+    ASSEMBLING: 'собирается',
+    READY:      'готов',
+    ISSUING:    'выдается',
+    ISSUED:     'выдан',
+  };
+
+  const MENU = [
+    'Бургер Криспи', 'Твистер', 'Баскет 3 крыла', 'Баскет 6 крыльев',
+    'Попкорн курица (S)', 'Попкорн курица (M)', 'Попкорн курица (L)',
+    'Картофель фри (S)', 'Картофель фри (L)', 'Кукуруза',
+    'Кола (M)', 'Кола (L)', 'Пепси (M)', 'Шейк ваниль',
+    'Пирожок вишня', 'Соус Барбекю', 'Соус Чили'
+  ];
+
+  let orders = [];
+  let nextId = 1;
+
+  /* ── MOBILE NOTIFICATION QUEUE ── */
+  let mobileQueue = [];      // [{orderId, cell}, ...]
+  let mobileNotifying = false;
+
+  function enqueueMobileNotif(orderId, cell) {
+    mobileQueue.push({ orderId, cell });
+    if (!mobileNotifying) processMobileQueue();
+  }
+
+  function processMobileQueue() {
+    if (mobileQueue.length === 0) {
+      mobileNotifying = false;
+      renderMobileBlock();
+      return;
+    }
+    mobileNotifying = true;
+    const notif = mobileQueue.shift();
+    showMobileNotif(notif.orderId, notif.cell);
+    setTimeout(() => processMobileQueue(), 5000);
+  }
+
+  function showMobileNotif(orderId, cell) {
+    const body = document.getElementById('mobile-body');
+    const btn  = document.getElementById('btn-mobile');
+    btn.disabled = true;
+    const colorClass = cell <= 2 ? 'mobile-notif-red' : 'mobile-notif-green';
+    body.innerHTML = `
+      <div class="mobile-notif ${colorClass}">
+        <div class="mobile-notif-num">#${orderId}</div>
+        <div class="mobile-notif-arrow">→</div>
+        <div class="mobile-notif-cell">Ячейка ${cell}</div>
+      </div>
+      <div class="mobile-notif-label">📲 Уведомление отправлено</div>
+    `;
+  }
+
+  function renderMobileBlock() {
+    const body = document.getElementById('mobile-body');
+    const btn  = document.getElementById('btn-mobile');
+    body.innerHTML = `<button class="btn-channel btn-mobile" id="btn-mobile" onclick="createOrder('Моб приложение')">+ Создать заказ</button>`;
+    // btn reference is now stale — the new element is already correct
+  }
+
+  /* ── HELPERS ── */
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function randomItems() {
+    return shuffle(MENU).slice(0, Math.floor(Math.random() * 3) + 2);
+  }
+
+  function fmt(d) {
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function getFreeCell() {
+    const used = new Set(
+      orders.filter(o => o.status !== ST.ISSUED && o.cell !== null).map(o => o.cell)
+    );
+    for (let c = 1; c <= 4; c++) if (!used.has(c)) return c;
+    return null;
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  /* ── ACTIONS ── */
+  function createOrder(channel) {
+    const o = {
+      id: nextId++,
+      channel,
+      createdAt: new Date(),
+      status: ST.CREATED,
+      items: randomItems(),
+      cell: null
+    };
+    orders.push(o);
+    renderAll();
+
+    setTimeout(() => {
+      const order = orders.find(x => x.id === o.id);
+      if (order && order.status === ST.CREATED) {
+        order.status = ST.ASSEMBLING;
+        renderAll();
+      }
+    }, 1000);
+  }
+
+  function packerClick(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+
+    if (o.status === ST.ASSEMBLING) {
+      const cell = getFreeCell();
+      if (cell === null) {
+        showToast('⚠️ Свободных ячеек нет — подождите выдачи текущего заказа');
+        return;
+      }
+      o.cell = cell;
+      o.status = ST.READY;
+      renderAll();
+
+    } else if (o.status === ST.READY) {
+      o.status = ST.ISSUING;
+
+      // Trigger mobile notification if order came from mobile app
+      if (o.channel === 'Моб приложение') {
+        enqueueMobileNotif(o.id, o.cell);
+      }
+
+      renderAll();
+    }
+  }
+
+  function presenterClick(id) {
+    const o = orders.find(x => x.id === id);
+    if (o && o.status === ST.ISSUING) {
+      o.status = ST.ISSUED;
+      renderAll();
+    }
+  }
+
+  /* ── CARD HTML ── */
+  function channelChipClass(ch) {
+    return { 'Киоск': 'ch-kiosk', 'Моб приложение': 'ch-mobile', 'Касса': 'ch-cashier' }[ch] || '';
+  }
+
+  function cardHint(s) {
+    if (s === ST.ASSEMBLING) return '👆 Нажмите — назначить ячейку';
+    if (s === ST.READY)      return '👆 Нажмите — передать презентеру';
+    if (s === ST.ISSUING)    return '👆 Нажмите — заказ выдан';
+    return '';
+  }
+
+  function statusCardClass(s) {
+    return { [ST.ASSEMBLING]: 'assembling', [ST.READY]: 'ready', [ST.ISSUING]: 'issuing' }[s] || '';
+  }
+
+  function orderCardHTML(o, fn) {
+    return `
+      <div class="order-card ${statusCardClass(o.status)}" onclick="${fn}(${o.id})">
+        <div class="card-top">
+          <div class="card-num">#${o.id}</div>
+          <div class="card-badges">
+            <span class="card-channel ${channelChipClass(o.channel)}">${o.channel}</span>
+            <span class="card-status">${o.status}</span>
+          </div>
+        </div>
+        <div class="card-items">${o.items.join(' · ')}</div>
+        <div class="card-footer">
+          <span>${fmt(o.createdAt)}</span>
+          ${o.cell ? `<span class="cell-badge">Ячейка ${o.cell}</span>` : ''}
+        </div>
+        <div class="card-hint">${cardHint(o.status)}</div>
+      </div>`;
+  }
+
+  /* ── RENDER ── */
+  function renderChannelStats() {
+    // stats removed
+  }
+
+  function renderPacker() {
+    const body  = document.getElementById('packer-body');
+    const badge = document.getElementById('packer-badge');
+    const list  = orders.filter(o => o.status === ST.ASSEMBLING || o.status === ST.READY);
+    badge.textContent = list.length;
+    body.innerHTML = list.length
+      ? list.map(o => orderCardHTML(o, 'packerClick')).join('')
+      : '<div class="empty-state">Нет активных заказов</div>';
+  }
+
+  function presenterCardHTML(o) {
+    const colorClass = o.cell <= 2 ? 'cell-red' : 'cell-green';
+    return `
+      <div class="presenter-card ${colorClass}" onclick="presenterClick(${o.id})">
+        <div class="presenter-top">
+          <div class="presenter-cell">Ячейка ${o.cell}</div>
+          <div class="presenter-order-badge">#${o.id}</div>
+        </div>
+        <div class="presenter-items">${o.items.join(' · ')}</div>
+        <div class="presenter-footer">
+          <span>${fmt(o.createdAt)} · ${o.channel}</span>
+          <span class="presenter-hint">👆 Нажмите — выдан</span>
+        </div>
+      </div>`;
+  }
+
+  function renderPresenter() {
+    const body  = document.getElementById('presenter-body');
+    const badge = document.getElementById('presenter-badge');
+    const list  = orders.filter(o => o.status === ST.ISSUING);
+    badge.textContent = list.length;
+    body.innerHTML = list.length
+      ? list.map(o => presenterCardHTML(o)).join('')
+      : '<div class="empty-state">Нет заказов к выдаче</div>';
+  }
+
+  function renderPickup() {
+    const grid    = document.getElementById('pickup-grid');
+    const issuing = orders.filter(o => o.status === ST.ISSUING);
+    let html = '';
+    for (let c = 1; c <= 4; c++) {
+      const match = issuing.find(o => o.cell === c);
+      html += `
+        <div class="pickup-cell ${c <= 2 ? 'pc-red' : 'pc-green'} ${match ? 'occupied' : ''}">
+          <div class="pc-label">Ячейка ${c}</div>
+          <div class="pc-order">${match ? '#' + match.id : '—'}</div>
+        </div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderGuestMonitor() {
+    const prepEl    = document.getElementById('gm-preparing');
+    const collectEl = document.getElementById('gm-collect');
+
+    const prep = orders.filter(o => [ST.CREATED, ST.ASSEMBLING, ST.READY].includes(o.status));
+    const coll = orders.filter(o => o.status === ST.ISSUING);
+
+    prepEl.innerHTML = prep.length
+      ? prep.map(o => `<div class="gm-chip">${o.id}</div>`).join('')
+      : '<span class="gm-empty">—</span>';
+
+    collectEl.innerHTML = coll.length
+      ? coll.map(o => {
+          const rc = o.cell <= 2 ? 'gm-row-red' : 'gm-row-green';
+          return `
+            <div class="gm-row ${rc}">
+              <div class="gm-row-num">${o.id}</div>
+              <div class="gm-arrow">→</div>
+              <div class="gm-cell">Ячейка ${o.cell}</div>
+            </div>`;
+        }).join('')
+      : '<span class="gm-empty">—</span>';
+  }
+
+  function renderTable() {
+    const pillClass = {
+      [ST.CREATED]:    'sp-created',
+      [ST.ASSEMBLING]: 'sp-assembling',
+      [ST.READY]:      'sp-ready',
+      [ST.ISSUING]:    'sp-issuing',
+      [ST.ISSUED]:     'sp-issued',
+    };
+
+    document.getElementById('table-count').textContent = `${orders.length} заказов`;
+    document.getElementById('tbody').innerHTML = [...orders].reverse().map(o => `
+      <tr>
+        <td class="num-cell">#${o.id}</td>
+        <td><span class="ch-pill ${channelChipClass(o.channel)}">${o.channel}</span></td>
+        <td>${fmt(o.createdAt)}</td>
+        <td><span class="spill ${pillClass[o.status]}">${o.status}</span></td>
+        <td>${o.cell !== null ? o.cell : '—'}</td>
+        <td>${o.items.join(', ')}</td>
+      </tr>`).join('');
+  }
+
+  function renderAll() {
+    renderChannelStats();
+    renderPacker();
+    renderPresenter();
+    renderPickup();
+    renderGuestMonitor();
+    renderTable();
+    // Don't touch mobile block here — managed separately via queue
+  }
+
+  /* ── CLOCK ── */
+  function tickClock() {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('ru-RU');
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  /* ── INIT ── */
+  renderAll();
+</script>
+</body>
+</html>
