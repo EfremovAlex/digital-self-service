@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Self-Service — Пилот · Целевая схема</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface2: #f7f8fa;
+      --border: #e2e6ec;
+      --border2: #d0d6e0;
+      --text: #1a202c;
+      --muted: #6b7280;
+
+      --green: #16a34a;
+      --green-dim: #f0fdf4;
+      --green-border: #bbf7d0;
+      --green-text: #14532d;
+
+      --blue: #2563eb;
+      --blue-dim: #eff6ff;
+      --blue-border: #bfdbfe;
+      --blue-text: #1e3a8a;
+
+      --red: #dc2626;
+      --red-dim: #fff5f5;
+      --red-border: #fecaca;
+
+      --orange-dim: #fffbeb;
+      --orange-border: #fde68a;
+      --orange-text: #92400e;
+      --accent: #d97706;
+
+      --kiosk-color: #2563eb;
+      --kiosk-dim: #eff6ff;
+
+      --mobile-color: #7c3aed;
+      --mobile-dim: #f5f3ff;
+      --mobile-border: #ddd6fe;
+
+      --cashier-color: #0891b2;
+      --cashier-dim: #ecfeff;
+
+      --delivery-color: #64748b;
+      --delivery-dim: #f8fafc;
+      --delivery-border: #e2e8f0;
+
+      --bypass-dim: #fafafa;
+      --bypass-border: #e2e8f0;
+      --bypass-text: #64748b;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── TOP BAR ─── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .topbar-left { display: flex; flex-direction: column; gap: 1px; }
+    .topbar-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .topbar-sub   { font-size: 0.65rem; color: var(--muted); }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .clock { font-size: 1.2rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+    /* No-cell counter */
+    .nocell-counter {
+      display: flex; align-items: center; gap: 6px;
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: 10px;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #c2410c;
+    }
+    .nocell-counter.zero { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+    .nocell-num { font-size: 1.1rem; font-weight: 800; }
+
+    /* ─── HINT BAR ─── */
+    .hint-bar {
+      background: #fffbeb; border-bottom: 1px solid #fde68a;
+      padding: 6px 18px; display: flex; gap: 20px; flex-wrap: wrap;
+    }
+    .hint { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #92400e; }
+    .hint-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── LAYOUT ─── */
+    .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+    .row-channels { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    .row-monitor  { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+    .row-workers  { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+    .row-orders   { display: grid; grid-template-columns: 1fr; }
+
+    /* ─── PANEL ─── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex; flex-direction: column;
+    }
+    .panel-head {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title {
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted);
+    }
+    .badge {
+      background: var(--border); color: var(--muted);
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    }
+    .panel-body {
+      padding: 10px; display: flex; flex-direction: column; gap: 8px;
+      flex: 1; overflow-y: auto; min-height: 100px; max-height: 300px;
+    }
+    .empty-state { color: #d1d5db; font-size: 0.78rem; text-align: center; padding: 24px 10px; }
+
+    /* ─── CHANNEL BLOCKS ─── */
+    .channel-block {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex; flex-direction: column;
+    }
+    .channel-head {
+      padding: 10px 13px 9px;
+      display: flex; align-items: center; gap: 9px;
+      border-bottom: 1px solid var(--border);
+    }
+    .channel-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .channel-name { font-size: 0.82rem; font-weight: 700; }
+    .channel-kiosk   .channel-icon { background: var(--kiosk-dim); }
+    .channel-kiosk   .channel-name { color: var(--kiosk-color); }
+    .channel-mobile  .channel-icon { background: var(--mobile-dim); }
+    .channel-mobile  .channel-name { color: var(--mobile-color); }
+    .channel-cashier .channel-icon { background: var(--cashier-dim); }
+    .channel-cashier .channel-name { color: var(--cashier-color); }
+    .channel-delivery .channel-icon { background: var(--delivery-dim); }
+    .channel-delivery .channel-name { color: var(--delivery-color); }
+
+    .channel-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .channel-tag {
+      font-size: 0.6rem; font-weight: 600;
+      padding: 2px 7px; border-radius: 20px;
+      align-self: flex-start;
+    }
+    .tag-bypass { background: var(--delivery-dim); border: 1px solid var(--delivery-border); color: var(--delivery-color); }
+
+    .btn-channel {
+      width: 100%; border: none; padding: 8px 12px;
+      border-radius: 9px; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: transform 0.15s, opacity 0.15s; color: #fff;
+    }
+    .btn-channel:hover   { transform: scale(1.02); }
+    .btn-channel:active  { transform: scale(0.97); }
+    .btn-channel:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-kiosk    { background: var(--kiosk-color); }
+    .btn-mobile   { background: var(--mobile-color); }
+    .btn-cashier  { background: var(--cashier-color); }
+    .btn-delivery { background: var(--delivery-color); }
+
+    /* Mobile notification */
+    .mobile-notif { border-radius: 9px; padding: 8px 12px; display: flex; align-items: center; justify-content: center; gap: 9px; font-weight: 700; animation: chipIn 0.25s ease; }
+    .mobile-notif-red   { background: var(--red-dim);  border: 1.5px solid var(--red-border); }
+    .mobile-notif-green { background: var(--green-dim);border: 1.5px solid var(--green-border);}
+    .mobile-notif-num   { font-size: 1.1rem; }
+    .mobile-notif-red   .mobile-notif-num { color: var(--red); }
+    .mobile-notif-green .mobile-notif-num { color: var(--green); }
+    .mobile-notif-arrow { color: #9ca3af; }
+    .mobile-notif-cell  { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+    .mobile-notif-red   .mobile-notif-cell { background: var(--red-dim);  border: 1px solid var(--red-border);   color: var(--red); }
+    .mobile-notif-green .mobile-notif-cell { background: var(--green-dim);border: 1px solid var(--green-border); color: var(--green); }
+    .mobile-notif-label { font-size: 0.58rem; color: var(--muted); text-align: center; margin-top: 2px; }
+
+    /* ─── ORDER CARDS (Packer) ─── */
+    .order-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 11px; padding: 10px 12px; transition: all 0.18s;
+    }
+    .order-card:hover    { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.09); }
+    .order-card.assembling { border-color: var(--orange-border); background: var(--orange-dim); }
+    .order-card.ready      { border-color: var(--green-border);  background: var(--green-dim); }
+    .order-card.bypass-assembling { border-color: var(--delivery-border); background: var(--delivery-dim); }
+    .order-card.bypass-ready      { border-color: var(--delivery-border); background: #f8fafc; }
+
+    .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .card-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+    .assembling .card-num { color: var(--accent); }
+    .ready      .card-num { color: var(--green); }
+    .bypass-assembling .card-num { color: var(--delivery-color); }
+    .bypass-ready      .card-num { color: var(--delivery-color); }
+
+    .card-badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .card-status { font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+    .assembling .card-status { background: var(--orange-border); color: var(--orange-text); }
+    .ready      .card-status { background: var(--green-border);  color: var(--green-text); }
+    .bypass-assembling .card-status { background: var(--delivery-border); color: var(--delivery-color); }
+    .bypass-ready      .card-status { background: var(--delivery-border); color: var(--delivery-color); }
+
+    .card-channel { font-size: 0.58rem; font-weight: 600; padding: 2px 6px; border-radius: 20px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .card-items { font-size: 0.68rem; color: var(--muted); line-height: 1.55; margin-bottom: 7px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.63rem; color: #9ca3af; }
+    .cell-badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.63rem; }
+
+    /* Card actions row */
+    .card-actions { display: flex; gap: 6px; margin-top: 8px; padding-top: 7px; border-top: 1px solid; }
+    .assembling .card-actions { border-color: var(--orange-border); }
+    .bypass-assembling .card-actions { border-color: var(--delivery-border); }
+
+    .btn-assign {
+      flex: 1; background: var(--accent); color: #fff; border: none;
+      padding: 6px 10px; border-radius: 7px; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-assign:hover { background: #b45309; }
+
+    .btn-bypass {
+      background: var(--surface); color: var(--delivery-color);
+      border: 1.5px solid var(--delivery-border); padding: 6px 10px;
+      border-radius: 7px; font-size: 0.7rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-bypass:hover { background: var(--delivery-dim); }
+
+    .card-hint { font-size: 0.6rem; margin-top: 7px; padding-top: 6px; border-top: 1px solid; text-align: center; color: #9ca3af; }
+    .ready           .card-hint { border-color: var(--green-border);    color: var(--green); }
+    .bypass-ready    .card-hint { border-color: var(--delivery-border); color: var(--delivery-color); }
+
+    /* ─── EXCEPTION PANEL ─── */
+    .exception-card {
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 11px; padding: 10px 12px; cursor: pointer; transition: all 0.18s;
+    }
+    .exception-card:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .exc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .exc-num { font-size: 1.3rem; font-weight: 800; color: var(--delivery-color); }
+    .exc-badge { background: var(--delivery-dim); border: 1px solid var(--delivery-border); color: var(--delivery-color); font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+    .exc-items { font-size: 0.68rem; color: var(--muted); line-height: 1.55; margin-bottom: 7px; }
+    .exc-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.63rem; color: #9ca3af; padding-top: 6px; border-top: 1px solid var(--border); }
+    .exc-hint { font-size: 0.6rem; color: var(--delivery-color); }
+
+    /* ─── GUEST MONITOR ─── */
+    .gm-wrap .panel-body { padding: 0; min-height: unset; max-height: unset; overflow: visible; }
+    .gm-body { display: grid; grid-template-columns: 1fr 1fr; flex: 1; }
+    .gm-col { padding: 12px 16px 14px; }
+    .gm-col:first-child { border-right: 1px solid var(--border); }
+    .gm-col-title { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
+    .gm-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; align-items: flex-start; }
+    .gm-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 11px; font-size: 1.3rem; font-weight: 800; color: #6b7280; line-height: 1; animation: chipIn 0.2s ease; }
+    .gm-row { display: flex; align-items: center; gap: 9px; border-radius: 9px; padding: 8px 13px; animation: chipIn 0.2s ease; }
+    .gm-row-red   { background: var(--red-dim);  border: 1.5px solid var(--red-border); }
+    .gm-row-green { background: var(--green-dim);border: 1.5px solid var(--green-border);}
+    .gm-row-num { font-size: 1.4rem; font-weight: 900; line-height: 1; }
+    .gm-row-red   .gm-row-num { color: var(--red); }
+    .gm-row-green .gm-row-num { color: var(--green); }
+    .gm-arrow { font-size: 1rem; color: #d1d5db; }
+    .gm-cell { font-size: 0.78rem; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+    .gm-row-red   .gm-cell { background: var(--red-dim);  border: 1px solid var(--red-border);   color: var(--red); }
+    .gm-row-green .gm-cell { background: var(--green-dim);border: 1px solid var(--green-border); color: var(--green); }
+    .gm-empty { font-size: 0.73rem; color: #d1d5db; }
+
+    /* ─── PICKUP ZONE ─── */
+    .pickup-grid { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
+    .pickup-cell { border-radius: 11px; padding: 12px 7px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 76px; transition: all 0.25s; }
+    .pc-red   { background: var(--red-dim);  border: 2px solid var(--red-border); }
+    .pc-green { background: var(--green-dim);border: 2px solid var(--green-border);}
+    .pc-red.occupied   { border-color: var(--red);   box-shadow: 0 0 12px rgba(220,38,38,0.14); cursor: pointer; }
+    .pc-green.occupied { border-color: var(--green); box-shadow: 0 0 12px rgba(22,163,74,0.14);  cursor: pointer; }
+    .pc-red.occupied:hover   { opacity: 0.85; }
+    .pc-green.occupied:hover { opacity: 0.85; }
+    .pc-label { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 6px; }
+    .pc-order { font-size: 1.6rem; font-weight: 900; line-height: 1; transition: all 0.2s; }
+    .pc-red .pc-order   { color: #fca5a5; }
+    .pc-green .pc-order { color: #bbf7d0; }
+    .pc-red.occupied .pc-order   { color: var(--red); }
+    .pc-green.occupied .pc-order { color: var(--green); }
+    .pc-hint { font-size: 0.56rem; color: inherit; opacity: 0.6; margin-top: 4px; text-align: center; }
+
+    /* ─── ORDERS TABLE ─── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .table-head { padding: 8px 15px; border-bottom: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: space-between; }
+    .table-head-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .table-scroll { max-height: 180px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 7px 14px; text-align: left; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; background: var(--surface2); position: sticky; top: 0; border-bottom: 1px solid var(--border); }
+    td { padding: 7px 14px; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); }
+    tr:hover td { background: var(--surface2); }
+    td.num-cell { color: var(--text); font-weight: 700; }
+
+    .spill { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 0.6rem; font-weight: 700; }
+    .sp-created   { background: #f3f4f6; color: #9ca3af; }
+    .sp-assembling{ background: var(--orange-border); color: var(--orange-text); }
+    .sp-ready     { background: var(--green-border);  color: var(--green-text); }
+    .sp-issuing   { background: var(--blue-border);   color: var(--blue-text); }
+    .sp-issued    { background: #f9fafb; color: #d1d5db; }
+    .ch-pill { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 0.58rem; font-weight: 600; }
+    .ch-kiosk    { background: var(--kiosk-dim);     color: var(--kiosk-color); }
+    .ch-mobile   { background: var(--mobile-dim);    color: var(--mobile-color); }
+    .ch-cashier  { background: var(--cashier-dim);   color: var(--cashier-color); }
+    .ch-delivery { background: var(--delivery-dim);  color: var(--delivery-color); border: 1px solid var(--delivery-border); }
+
+    /* ─── TOAST ─── */
+    .toast { position: fixed; bottom: 18px; right: 18px; background: #fff; border: 1.5px solid var(--red-border); color: var(--red); padding: 11px 16px; border-radius: 11px; font-size: 0.8rem; font-weight: 600; transform: translateY(70px); opacity: 0; transition: all 0.3s; z-index: 1000; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ─── PRESENTER CARDS ─── */
+    .presenter-card {
+      border-radius: 11px; padding: 11px 14px; cursor: pointer; transition: all 0.18s;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .presenter-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+    .presenter-card.cell-red   { background: var(--red-dim);  border: 1.5px solid var(--red-border); }
+    .presenter-card.cell-green { background: var(--green-dim);border: 1.5px solid var(--green-border);}
+    .presenter-top { display: flex; align-items: center; justify-content: space-between; }
+    .presenter-cell-label { font-size: 1.5rem; font-weight: 900; line-height: 1; }
+    .presenter-card.cell-red   .presenter-cell-label { color: var(--red); }
+    .presenter-card.cell-green .presenter-cell-label { color: var(--green); }
+    .presenter-order-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    }
+    .presenter-card.cell-red   .presenter-order-badge { background: var(--red-dim);  border: 1px solid var(--red-border);   color: var(--red); }
+    .presenter-card.cell-green .presenter-order-badge { background: var(--green-dim);border: 1px solid var(--green-border); color: var(--green); }
+    .presenter-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.62rem; color: #9ca3af; }
+    .presenter-hint { font-size: 0.58rem; text-align: center; padding-top: 5px; border-top: 1px solid; opacity: 0.7; }
+    .presenter-card.cell-red   .presenter-hint { border-color: var(--red-border);   color: var(--red); }
+    .presenter-card.cell-green .presenter-hint { border-color: var(--green-border); color: var(--green); }
+
+    @keyframes chipIn { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">Digital Self-Service — Целевая схема пилота</div>
+  </div>
+  <div class="topbar-right">
+    <div class="nocell-counter zero" id="nocell-counter">
+      <span>⚠️ Нет ячеек:</span>
+      <span class="nocell-num" id="nocell-num">0</span>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+  </div>
+</div>
+
+
+<div class="layout">
+
+  <!-- ROW 1: CHANNELS -->
+  <div class="row-channels">
+
+    <div class="channel-block channel-kiosk">
+      <div class="channel-head">
+        <div class="channel-icon">🖥️</div>
+        <div><div class="channel-name">Киоск</div></div>
+      </div>
+      <div class="channel-body">
+        <button class="btn-channel btn-kiosk" onclick="createOrder('Киоск')">+ Создать заказ</button>
+      </div>
+    </div>
+
+    <div class="channel-block channel-mobile">
+      <div class="channel-head">
+        <div class="channel-icon">📱</div>
+        <div><div class="channel-name">Моб приложение</div></div>
+      </div>
+      <div class="channel-body" id="mobile-body">
+        <button class="btn-channel btn-mobile" id="btn-mobile" onclick="createOrder('Моб приложение')">+ Создать заказ</button>
+      </div>
+    </div>
+
+    <div class="channel-block channel-cashier">
+      <div class="channel-head">
+        <div class="channel-icon">🧾</div>
+        <div><div class="channel-name">Касса</div></div>
+      </div>
+      <div class="channel-body">
+        <button class="btn-channel btn-cashier" onclick="createOrder('Касса')">+ Создать заказ</button>
+      </div>
+    </div>
+
+    <div class="channel-block channel-delivery">
+      <div class="channel-head">
+        <div class="channel-icon">🛵</div>
+        <div><div class="channel-name">Доставка</div></div>
+      </div>
+      <div class="channel-body">
+        <button class="btn-channel btn-delivery" onclick="createOrder('Доставка')">+ Создать заказ</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: GUEST MONITOR + PICKUP ZONE -->
+  <div class="row-monitor">
+
+    <div class="panel gm-wrap">
+      <div class="panel-head">
+        <div class="panel-title">🖥 Гостевой монитор</div>
+      </div>
+      <div class="panel-body" style="overflow:visible;">
+        <div class="gm-body">
+          <div class="gm-col">
+            <div class="gm-col-title">⏳ Готовится</div>
+            <div class="gm-chips" id="gm-preparing"></div>
+          </div>
+          <div class="gm-col">
+            <div class="gm-col-title">✅ Заберите заказ</div>
+            <div class="gm-chips" id="gm-collect"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">📍 Зона выдачи</div></div>
+      <div class="pickup-grid" id="pickup-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: PACKER + EXCEPTIONS -->
+  <div class="row-workers">
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">📦 Пакер</div>
+        <div class="badge" id="packer-badge">0</div>
+      </div>
+      <div class="panel-body" id="packer-body">
+        <div class="empty-state">Нет активных заказов</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">📺 Презентер</div>
+        <div class="badge" id="exc-badge">0</div>
+      </div>
+      <div class="panel-body" id="exc-body">
+        <div class="empty-state">Нет исключений</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: TABLE -->
+  <div class="row-orders">
+    <div class="table-wrap">
+      <div class="table-head">
+        <div class="table-head-title">Все заказы</div>
+        <div style="font-size:0.63rem;color:#9ca3af" id="table-count">0 заказов</div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>№</th><th>Канал</th><th>Время</th><th>Статус</th><th>Ячейка</th><th>Состав</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const ST = {
+    CREATED:    'создан',
+    ASSEMBLING: 'собирается',
+    READY:      'готов',
+    ISSUING:    'выдается',
+    ISSUED:     'выдан',
+  };
+
+  const MENU = [
+    'Бургер Криспи','Твистер','Баскет 3 крыла','Баскет 6 крыльев',
+    'Попкорн курица (S)','Попкорн курица (M)','Картофель фри (S)',
+    'Картофель фри (L)','Кукуруза','Кола (M)','Кола (L)',
+    'Пепси (M)','Шейк ваниль','Пирожок вишня','Соус Барбекю','Соус Чили'
+  ];
+
+  let orders = [];
+  let nextId = 1;
+  let noCellCount = 0;
+
+  // Mobile notification queue
+  let mobileQueue = [];
+  let mobileNotifying = false;
+
+  function shuffle(a) {
+    const b = [...a];
+    for (let i = b.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [b[i],b[j]] = [b[j],b[i]];
+    }
+    return b;
+  }
+  function randomItems() { return shuffle(MENU).slice(0, Math.floor(Math.random()*3)+2); }
+  function fmt(d) { return d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+  function getFreeCell() {
+    const used = new Set(orders.filter(o => o.status !== ST.ISSUED && o.cell !== null).map(o => o.cell));
+    for (let c=1; c<=4; c++) if (!used.has(c)) return c;
+    return null;
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  function incrementNoCellCount() {
+    noCellCount++;
+    const el = document.getElementById('nocell-num');
+    const wrap = document.getElementById('nocell-counter');
+    el.textContent = noCellCount;
+    wrap.classList.remove('zero');
+  }
+
+  /* ── MOBILE NOTIFICATIONS ── */
+  function enqueueMobileNotif(orderId, cell) {
+    mobileQueue.push({ orderId, cell });
+    if (!mobileNotifying) processMobileQueue();
+  }
+  function processMobileQueue() {
+    if (!mobileQueue.length) { mobileNotifying = false; renderMobileBlock(); return; }
+    mobileNotifying = true;
+    const n = mobileQueue.shift();
+    showMobileNotif(n.orderId, n.cell);
+    setTimeout(() => processMobileQueue(), 5000);
+  }
+  function showMobileNotif(orderId, cell) {
+    document.getElementById('btn-mobile').disabled = true;
+    const colorClass = cell <= 2 ? 'mobile-notif-red' : 'mobile-notif-green';
+    document.getElementById('mobile-body').innerHTML = `
+      <div class="mobile-notif ${colorClass}">
+        <div class="mobile-notif-num">#${orderId}</div>
+        <div class="mobile-notif-arrow">→</div>
+        <div class="mobile-notif-cell">Ячейка ${cell}</div>
+      </div>
+      <div class="mobile-notif-label">📲 Уведомление отправлено</div>`;
+  }
+  function renderMobileBlock() {
+    document.getElementById('mobile-body').innerHTML =
+      `<button class="btn-channel btn-mobile" id="btn-mobile" onclick="createOrder('Моб приложение')">+ Создать заказ</button>`;
+  }
+
+  /* ── ACTIONS ── */
+  function createOrder(channel) {
+    const isBypass = channel === 'Доставка';
+    const o = {
+      id: nextId++, channel, createdAt: new Date(),
+      status: ST.CREATED, items: randomItems(),
+      cell: null, isBypass
+    };
+    orders.push(o);
+    renderAll();
+    setTimeout(() => {
+      const order = orders.find(x => x.id === o.id);
+      if (order && order.status === ST.CREATED) { order.status = ST.ASSEMBLING; renderAll(); }
+    }, 1000);
+  }
+
+  function assignCell(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o || o.status !== ST.ASSEMBLING) return;
+    const cell = getFreeCell();
+    if (!cell) {
+      incrementNoCellCount();
+      showToast('⚠️ Свободных ячеек нет — подождите, пока гость заберёт заказ');
+      return;
+    }
+    o.cell = cell; o.status = ST.READY;
+    renderAll();
+  }
+
+  function setBypass(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o || o.status !== ST.ASSEMBLING) return;
+    o.isBypass = true; o.cell = null; o.status = ST.READY;
+    renderAll();
+  }
+
+  function packerReadyClick(id) {
+    const o = orders.find(x => x.id === id);
+    if (!o) return;
+    // Delivery (bypass) assembling → directly to выдается on click
+    if (o.status === ST.ASSEMBLING && o.isBypass) {
+      o.status = ST.ISSUING; renderAll(); return;
+    }
+    // Regular ready cards → выдается
+    if (o.status !== ST.READY) return;
+    o.status = ST.ISSUING;
+    if (!o.isBypass && o.channel === 'Моб приложение') enqueueMobileNotif(o.id, o.cell);
+    renderAll();
+  }
+
+  function pickupCellClick(id) {
+    const o = orders.find(x => x.id === id);
+    if (o && o.status === ST.ISSUING) { o.status = ST.ISSUED; renderAll(); }
+  }
+
+  function presenterClick(id) {
+    const o = orders.find(x => x.id === id);
+    if (o && o.status === ST.ISSUING) { o.status = ST.ISSUED; renderAll(); }
+  }
+
+  /* ── RENDER HELPERS ── */
+  function channelChipClass(ch) {
+    return {'Киоск':'ch-kiosk','Моб приложение':'ch-mobile','Касса':'ch-cashier','Доставка':'ch-delivery'}[ch]||'';
+  }
+
+  function renderPacker() {
+    const body = document.getElementById('packer-body');
+    const badge = document.getElementById('packer-badge');
+    const list = orders.filter(o => o.status === ST.ASSEMBLING || o.status === ST.READY);
+    badge.textContent = list.length;
+    if (!list.length) { body.innerHTML = '<div class="empty-state">Нет активных заказов</div>'; return; }
+
+    body.innerHTML = list.map(o => {
+      const isAssembling = o.status === ST.ASSEMBLING;
+      const isReady = o.status === ST.READY;
+      const isBypass = o.isBypass;
+
+      let cardClass = '';
+      if (isAssembling && !isBypass) cardClass = 'assembling';
+      else if (isAssembling && isBypass) cardClass = 'bypass-assembling';
+      else if (isReady && !isBypass) cardClass = 'ready';
+      else cardClass = 'bypass-ready';
+
+      const actionsHTML = isAssembling
+        ? (!isBypass
+            ? `<div class="card-actions">
+                 <button class="btn-assign" onclick="assignCell(${o.id})">📦 Назначить ячейку</button>
+                 <button class="btn-bypass" onclick="setBypass(${o.id})">Без ячейки ↗</button>
+               </div>`
+            : `<div class="card-hint" style="border-color:var(--delivery-border);color:var(--delivery-color)">👆 Нажмите — выдать</div>`)
+        : `<div class="card-hint">👆 Нажмите — выставить в зону выдачи</div>`;
+
+      const clickHandler = (isReady || (isAssembling && isBypass)) ? `onclick="packerReadyClick(${o.id})"` : '';
+      const cursor = (isReady || (isAssembling && isBypass)) ? 'cursor:pointer' : '';
+
+      return `
+        <div class="order-card ${cardClass}" ${clickHandler} style="${cursor}">
+          <div class="card-top">
+            <div class="card-num">#${o.id}</div>
+            <div class="card-badges">
+              <span class="card-channel ${channelChipClass(o.channel)}">${o.channel}</span>
+              <span class="card-status">${o.status}</span>
+            </div>
+          </div>
+          <div class="card-items">${o.items.join(' · ')}</div>
+          <div class="card-footer">
+            <span>${fmt(o.createdAt)}</span>
+            ${o.cell ? `<span class="cell-badge">Ячейка ${o.cell}</span>` : ''}
+          </div>
+          ${actionsHTML}
+        </div>`;
+    }).join('');
+  }
+
+  function renderPresenter() {
+    const body = document.getElementById('exc-body');
+    const badge = document.getElementById('exc-badge');
+    // All orders currently in "выдается"
+    const list = orders.filter(o => o.status === ST.ISSUING);
+    badge.textContent = list.length;
+    if (!list.length) { body.innerHTML = '<div class="empty-state">Нет заказов на выдаче</div>'; return; }
+    body.innerHTML = list.map(o => {
+      if (!o.isBypass && o.cell) {
+        // Presenter card: cell as hero, order number as badge
+        const cc = o.cell <= 2 ? 'cell-red' : 'cell-green';
+        return `
+          <div class="presenter-card ${cc}" onclick="presenterClick(${o.id})">
+            <div class="presenter-top">
+              <div class="presenter-cell-label">Ячейка ${o.cell}</div>
+              <div class="presenter-order-badge">#${o.id}</div>
+            </div>
+            <div class="presenter-footer">
+              <span class="ch-pill ${channelChipClass(o.channel)}">${o.channel}</span>
+              <span>${fmt(o.createdAt)}</span>
+            </div>
+            <div class="presenter-hint">👆 Нажмите — выдан</div>
+          </div>`;
+      } else {
+        // Bypass: delivery or large order — exception-style card
+        return `
+          <div class="exception-card" onclick="presenterClick(${o.id})">
+            <div class="exc-top">
+              <div class="exc-num">#${o.id}</div>
+              <span class="exc-badge">${o.channel === 'Доставка' ? '🛵 Доставка' : '📦 Большой заказ'}</span>
+            </div>
+            <div class="exc-items">${o.items.join(' · ')}</div>
+            <div class="exc-footer">
+              <span>${fmt(o.createdAt)}</span>
+              <span class="exc-hint">👆 Нажмите — выдан</span>
+            </div>
+          </div>`;
+      }
+    }).join('');
+  }
+
+  function renderPickup() {
+    const grid = document.getElementById('pickup-grid');
+    const issuing = orders.filter(o => o.status === ST.ISSUING && !o.isBypass);
+    let html = '';
+    for (let c=1; c<=4; c++) {
+      const match = issuing.find(o => o.cell === c);
+      const occupied = match ? 'occupied' : '';
+      const click = match ? `onclick="pickupCellClick(${match.id})" style="cursor:pointer"` : '';
+      const hint = match ? `<div class="pc-hint">👆 гость забрал</div>` : '';
+      html += `
+        <div class="pickup-cell ${c<=2?'pc-red':'pc-green'} ${occupied}" ${click}>
+          <div class="pc-label">Ячейка ${c}</div>
+          <div class="pc-order">${match ? '#'+match.id : '—'}</div>
+          ${hint}
+        </div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderGuestMonitor() {
+    const prepEl    = document.getElementById('gm-preparing');
+    const collectEl = document.getElementById('gm-collect');
+    const prep = orders.filter(o => [ST.CREATED,ST.ASSEMBLING,ST.READY].includes(o.status));
+    // All ISSUING orders in "Заберите заказ" — bypass orders show number only
+    const coll = orders.filter(o => o.status === ST.ISSUING);
+
+    prepEl.innerHTML = prep.length
+      ? prep.map(o => `<div class="gm-chip">${o.id}</div>`).join('')
+      : '<span class="gm-empty">—</span>';
+
+    collectEl.innerHTML = coll.length
+      ? coll.map(o => {
+          if (o.isBypass) {
+            return `<div class="gm-chip" style="background:var(--surface2);border:1.5px solid var(--border2);color:var(--muted)">${o.id}</div>`;
+          }
+          const rc = o.cell <= 2 ? 'gm-row-red' : 'gm-row-green';
+          return `<div class="gm-row ${rc}">
+            <div class="gm-row-num">${o.id}</div>
+            <div class="gm-arrow">→</div>
+            <div class="gm-cell">Ячейка ${o.cell}</div>
+          </div>`;
+        }).join('')
+      : '<span class="gm-empty">—</span>';
+  }
+
+  function renderTable() {
+    const pillClass = { [ST.CREATED]:'sp-created',[ST.ASSEMBLING]:'sp-assembling',[ST.READY]:'sp-ready',[ST.ISSUING]:'sp-issuing',[ST.ISSUED]:'sp-issued' };
+    document.getElementById('table-count').textContent = `${orders.length} заказов`;
+    document.getElementById('tbody').innerHTML = [...orders].reverse().map(o => `
+      <tr>
+        <td class="num-cell">#${o.id}</td>
+        <td><span class="ch-pill ${channelChipClass(o.channel)}">${o.channel}</span></td>
+        <td>${fmt(o.createdAt)}</td>
+        <td><span class="spill ${pillClass[o.status]}">${o.status}</span></td>
+        <td>${o.cell !== null ? o.cell : o.isBypass ? '—' : '—'}</td>
+        <td>${o.items.join(', ')}</td>
+      </tr>`).join('');
+  }
+
+  function renderAll() {
+    renderPacker(); renderPresenter(); renderPickup(); renderGuestMonitor(); renderTable();
+  }
+
+  function tickClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('ru-RU'); }
+  tickClock(); setInterval(tickClock, 1000);
+  renderAll();
+</script>
+</body>
+</html>
